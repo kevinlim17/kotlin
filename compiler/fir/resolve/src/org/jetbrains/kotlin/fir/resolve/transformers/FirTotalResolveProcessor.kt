@@ -43,8 +43,10 @@ class FirTotalResolveProcessor(private val session: FirSession) {
                 }
             } finally {
                 processor.afterPhase()
+                DumpFirTask.enqueueFromProcessor(processor, files.first())
             }
         }
+        DumpFirTask.flush()
     }
 }
 
