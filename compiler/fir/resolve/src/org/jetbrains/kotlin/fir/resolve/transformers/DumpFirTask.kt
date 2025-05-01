@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.fir.resolve.transformers
 import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.renderer.FirRenderer
+import org.jetbrains.kotlin.fir.renderer.renderElementAsTreeString
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.FirBodyResolveProcessor
 import org.jetbrains.kotlin.fir.resolve.transformers.body.resolve.FirImplicitTypeBodyResolveProcessor
 import org.jetbrains.kotlin.fir.resolve.transformers.contracts.FirContractResolveProcessor
@@ -19,7 +20,8 @@ import org.jetbrains.kotlin.fir.resolve.transformers.plugin.FirCompilerRequiredA
 /** Enable Generating Dump? */
 data class DumpConfig(
     val enabled: Boolean = true,
-    val phaseFilter: Set<String> = FirResolvePhase.entries.map { it.toString().lowercase() }.toSet()
+    val phaseFilter: Set<String> = FirResolvePhase.entries.map { it.toString().lowercase() }.toSet(),
+    val useTreeFormat: Boolean = true
 )
 
 object DumpFirTask {
@@ -28,14 +30,14 @@ object DumpFirTask {
     private var _config: DumpConfig = DumpConfig()
     val config: DumpConfig get() = _config
 
-    /** Should compiler dump the phase? */
+    /** Should the compiler dump the phase? */
     fun shouldDumpPhase(phase: FirResolvePhase?): Boolean {
         if (phase == null || !config.enabled) return false
         val phaseName = phase.toString().lowercase()
         return config.phaseFilter.isEmpty() || phaseName in config.phaseFilter
     }
 
-    /** Define phase from processor object*/
+    /** Define phase from a processor object*/
     fun getPhaseFromProcessor(processor: FirResolveProcessor): FirResolvePhase? {
         return when (processor) {
             is FirImportResolveProcessor -> FirResolvePhase.IMPORTS
@@ -71,15 +73,13 @@ object DumpFirTask {
         val firElementVisitor = FirRenderer()
 
         for ((phaseName, input) in scheduledDumpList) {
-            /**
-            File("build/fir-phase-dumps").apply { mkdirs() }
-            .resolve("${phaseName.lowercase()}-fir.txt")
-            .also { it.writeText(input.toString()) }
-            .also { println("[org.jetbrains.kotlin.backend.common.phaser.PhaseEngine] Dumped FIR after phase: $phaseName to ${it.absolutePath}") }
-             */
-            println("=== [FIR DUMP] Phase: $phaseName ===")
-            firElementVisitor.renderElementAsString(input)
-            println("=== [END OF FIR DUMP: $phaseName] === \n")
+            val header = ("=== [FIR DUMP] Phase: $phaseName ===")
+            val footer = ("=== [END OF FIR DUMP: $phaseName] === \n")
+
+            println(header)
+            println(firElementVisitor.renderElementAsTreeString(input))
+            //println(firElementVisitor.renderElementAsString(input))
+            println(footer)
         }
         scheduledDumpList.clear()
     }
