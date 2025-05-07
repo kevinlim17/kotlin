@@ -7,16 +7,27 @@ package org.jetbrains.kotlin.fir.renderer
 
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.declarations.FirClass
+import org.jetbrains.kotlin.fir.declarations.FirConstructor
+import org.jetbrains.kotlin.fir.declarations.FirEnumEntry
 import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.declarations.FirFunction
 import org.jetbrains.kotlin.fir.declarations.FirProperty
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
 import org.jetbrains.kotlin.fir.declarations.FirSimpleFunction
+import org.jetbrains.kotlin.fir.declarations.FirTypeAlias
+import org.jetbrains.kotlin.fir.declarations.FirTypeParameter
+import org.jetbrains.kotlin.fir.declarations.FirValueParameter
 import org.jetbrains.kotlin.fir.declarations.FirVariable
 import org.jetbrains.kotlin.fir.declarations.utils.modality
 import org.jetbrains.kotlin.fir.declarations.utils.visibility
+import org.jetbrains.kotlin.fir.declarations.FirAnonymousFunction
+import org.jetbrains.kotlin.fir.expressions.FirAnnotation
+import org.jetbrains.kotlin.fir.expressions.FirWhenBranch
 import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.expressions.FirFunctionCall
+import org.jetbrains.kotlin.fir.expressions.FirLiteralExpression
+import org.jetbrains.kotlin.fir.expressions.FirPropertyAccessExpression
+import org.jetbrains.kotlin.fir.expressions.FirWhenExpression
 import org.jetbrains.kotlin.fir.expressions.arguments
 import org.jetbrains.kotlin.fir.types.FirResolvedTypeRef
 import org.jetbrains.kotlin.fir.visitors.FirVisitorVoid
@@ -40,7 +51,7 @@ class FirTreeDumpVisitor(
             writer.write(indentation)
         }
     } catch (e: Exception) {
-        TODO("적절한 Exception Logic 구현")
+        System.err.println("Error writing indentation: ${e.message}")
     }
 
     private fun writeLine(text: String) {
@@ -49,7 +60,7 @@ class FirTreeDumpVisitor(
             writer.write(text)
             writer.write("\n")
         } catch (e: Exception) {
-            TODO("적절한 Exception Logic 구현")
+            System.err.println("Error writing line: ${e.message}")
         }
     }
 
@@ -113,6 +124,92 @@ class FirTreeDumpVisitor(
             writeLine("Arguments: ")
             withIndent {
                 functionCall.arguments.forEach { it.accept(this) }
+            }
+        }
+    }
+
+    override fun visitValueParameter(valueParameter: FirValueParameter) {
+        val visibility = valueParameter.visibility.toString()
+        writeLine("Parameter: ${valueParameter.name} : ${valueParameter.returnTypeRef}")
+        withIndent {
+            visitChildren(valueParameter)
+        }
+    }
+
+    override fun visitTypeParameter(typeParameter: FirTypeParameter) {
+        writeLine("Type Parameter: ${typeParameter.name}")
+        withIndent {
+            visitChildren(typeParameter)
+        }
+    }
+
+    override fun visitConstructor(constructor: FirConstructor) {
+        val visibility = constructor.visibility.toString()
+        val modality = constructor.modality.toString()
+        writeLine("Constructor: [$visibility $modality]")
+        withIndent {
+            visitChildren(constructor)
+        }
+    }
+
+    override fun visitAnonymousFunction(anonymousFunction: FirAnonymousFunction) {
+        writeLine("Anonymous Function:")
+        withIndent {
+            visitChildren(anonymousFunction)
+        }
+    }
+
+    override fun visitWhenExpression(whenExpression: FirWhenExpression) {
+        writeLine("When Expression:")
+        withIndent {
+            whenExpression.subjectVariable?.accept(this)
+            whenExpression.branches.forEach { it.accept(this) }
+        }
+    }
+
+    override fun visitLiteralExpression(literalExpression: FirLiteralExpression) {
+        writeLine("Literal: ${literalExpression.value}")
+    }
+
+    override fun visitPropertyAccessExpression(propertyAccessExpression: FirPropertyAccessExpression) {
+        writeLine("Property Access: ${propertyAccessExpression.calleeReference}")
+        withIndent {
+            visitChildren(propertyAccessExpression)
+        }
+    }
+
+    override fun visitTypeAlias(typeAlias: FirTypeAlias) {
+        val visibility = typeAlias.visibility.toString()
+        writeLine("Type Alias: ${typeAlias.name} [$visibility]")
+        withIndent {
+            visitChildren(typeAlias)
+        }
+    }
+
+    override fun visitEnumEntry(enumEntry: FirEnumEntry) {
+        writeLine("Enum Entry: ${enumEntry.name}")
+        withIndent {
+            visitChildren(enumEntry)
+        }
+    }
+
+    override fun visitAnnotation(annotation: FirAnnotation) {
+        writeLine("Annotation: ${annotation.annotationTypeRef}")
+        withIndent {
+            visitChildren(annotation)
+        }
+    }
+
+    override fun visitWhenBranch(whenBranch: FirWhenBranch) {
+        writeLine("When Branch:")
+        withIndent {
+            writeLine("Condition:")
+            withIndent {
+                whenBranch.condition.accept(this)
+            }
+            writeLine("Result:")
+            withIndent {
+                whenBranch.result.accept(this)
             }
         }
     }
